@@ -1,64 +1,105 @@
-# from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
-# app = FastAPI()
-
-# @app.get("/")
-# def say_hacked():
-#     return{"dhanraj":"your mobile number:- 9763154785",
-#            "dhanraj":"1.25,500rs"
-#         }
-
-
-# from fastapi import FastAPI
-
-# app = FastAPI()
-
-# @app.get("/")
-# def say_mobile_number():
-#     return{"amit":"phone number",
-#            "01":8767446218,}
-
-# from fastapi import FastAPI # FastAPI = A fast framework to build APIs using Python
-
-# app = FastAPI() #API (Application Programming Interface)
-
-# @app.get("/")
-# def say_check():
-#     return{"patient":"amit"}
-
-
-# @app.get("/second")
-# def say_checkok():
-#     return{"patient":"2 Ajay"}
-
-# @app.get("/third")
-# def say_allok():
-#     return["everything ok"]
-
-# @app.get("/patient/{name}")
-# def get_patient(name: str):
-#     return {"patient": name}
-
-# from fastapi import FastAPI
-
-# app = FastAPI()
-
-# @app.get("/patient/{name}")
-# def get_patient(name:str,age:int,mobile_number:int,DOB:str,diceses:str):
-#     return{"name":name,
-#            "age":age,
-#            "mobile_number":mobile_number,
-#            "DOB":DOB,
-#            "diceses":"fiver"
-#     }
-
-from fastapi import FastAPI
 app = FastAPI()
 
-@app.get("/student_admission/{name}")
-def get_student(name:str,ssc_markes:str,ssc_hallticket_number:str,mother_name:str):
-    return{"name":name,
-           "ssc_markes":ssc_markes,
-           "ssc_hallticket_number":ssc_hallticket_number,
-           "mother_name":mother_name
-    }
+# ------------------ DATABASE (in-memory) ------------------
+patients = []
+doctors = []
+appointments = []
+
+# ------------------ MODELS ------------------
+class Patient(BaseModel):
+    id: int
+    name: str
+    age: int
+    disease: str
+
+class Doctor(BaseModel):
+    id: int
+    name: str
+    specialization: str
+
+class Appointment(BaseModel):
+    id: int
+    patient_id: int
+    doctor_id: int
+
+# ------------------ HEALTH ------------------
+@app.get("/")
+def home():
+    return {"msg": "Hospital Management API Running"}
+
+# ------------------ PATIENT APIs ------------------
+
+# Add patient
+@app.post("/patients")
+def add_patient(patient: Patient):
+    for p in patients:
+        if p.id == patient.id:
+            raise HTTPException(status_code=400, detail="Patient already exists")
+    
+    patients.append(patient)
+    return {"msg": "Patient added successfully"}
+
+# Get all patients
+@app.get("/patients")
+def get_patients():
+    return {"patients": patients}
+
+# Get patient by ID
+@app.get("/patients/{patient_id}")
+def get_patient(patient_id: int):
+    for p in patients:
+        if p.id == patient_id:
+            return p
+    raise HTTPException(status_code=404, detail="Patient not found")
+
+# Delete patient
+@app.delete("/patients/{patient_id}")
+def delete_patient(patient_id: int):
+    for p in patients:
+        if p.id == patient_id:
+            patients.remove(p)
+            return {"msg": "Patient deleted"}
+    raise HTTPException(status_code=404, detail="Patient not found")
+
+# ------------------ DOCTOR APIs ------------------
+
+# Add doctor
+@app.post("/doctors")
+def add_doctor(doctor: Doctor):
+    for d in doctors:
+        if d.id == doctor.id:
+            raise HTTPException(status_code=400, detail="Doctor already exists")
+    
+    doctors.append(doctor)
+    return {"msg": "Doctor added successfully"}
+
+# Get all doctors
+@app.get("/doctors")
+def get_doctors():
+    return {"doctors": doctors}
+
+# ------------------ APPOINTMENT APIs ------------------
+
+# Book appointment
+@app.post("/appointments")
+def book_appointment(appo: Appointment):
+    # check patient exists
+    patient_exists = any(p.id == appo.patient_id for p in patients)
+    if not patient_exists:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    # check doctor exists
+    doctor_exists = any(d.id == appo.doctor_id for d in doctors)
+    if not doctor_exists:
+        raise HTTPException(status_code=404, detail="Doctor not found")
+
+    appointments.append(appo)
+    return {"msg": "Appointment booked successfully"}
+
+# Get all appointments
+@app.get("/appointments")
+def get_appointments():
+    return {"appointments": appointments}
